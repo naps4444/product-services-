@@ -1,0 +1,29 @@
+{
+  "$schema": "./package-schema.json",
+  "name": "product-history-service",
+  "version": "1.0.0",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "axios": "^1.7.8",
+    "class-transformer": "^0.5.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "objection": "^3.1.5",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.1",
+    "knex": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

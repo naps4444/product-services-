@@ -1,0 +1,14 @@
+{
+  "$schema": "./tsconfig-schema.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,            // Enable experimental support for decorators
+    "emitDecoratorMetadata": true,            // Emit metadata needed by decorators
+    "outDir": "./dist",                        // Output directory for compiled JavaScript
+    "module": "ESNext",                        // Use the ESNext module system
+    "target": "ESNext",                        // Compile to the latest ECMAScript version
+    "moduleResolution": "node",               // Resolve modules using Node.js-style resolution
+    "esModuleInterop": true,                  // Enable interop between CommonJS and ES Modules
+    "strict": true                            // Enable strict type-checking options
+  },
+  "include": ["src/**/*"]                     // Include all files in the `src` folder
+}
