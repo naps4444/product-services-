@@ -1,10 +1,10 @@
+import { Action } from './entities/Action';
 import 'reflect-metadata';
 import 'dotenv/config';
-import express from 'express';
 import bodyParser from 'body-parser';
 import { DataSource } from 'typeorm';
-import { Action } from './entities/Action.js';
 import router from './routes/productRoutes.js';
+import express, { Request, Response, NextFunction } from 'express';
 
 // Initialize Express application
 const app = express();
@@ -20,6 +20,7 @@ console.log('DB Config:', {
 });
 
 // Create and configure the TypeORM DataSource
+console.log('Creating data source...');
 export const dataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST,
@@ -28,7 +29,8 @@ export const dataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   entities: [Action],
-  synchronize: true, // Be cautious with synchronize in production
+  synchronize: true, // Automatically syncs schema with the database
+  logging: true, // Optional: Log SQL queries for debugging
 });
 
 // Connect to the database
@@ -44,40 +46,73 @@ dataSource
     );
   });
 
-// Define the /log route with debugging
-app.post('/log', async (req, res) => {
-  // Debugging: Log the request details
-  console.log('Request received on /log:');
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
+// Reusable function to validate fields (throws an error if validation fails)
+const validateFields = (fields: Record<string, any>): void => {
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) {
+      throw new Error(`${key} is required`);
+    }
+  }
+};
 
+// Define the /log route with debugging
+app.post('/log', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { action_type, product_id, shop_id, quantity_changed, date } = req.body;
+    console.log('Request body:', req.body);
+
+    const { product_id, shop_id, quantity_changed, action_type } = req.body;
 
     // Validate required fields
-    if (!action_type || !product_id || !shop_id || !quantity_changed || !date) {
-      res.status(400).json({ error: 'All fields are required.' });
-      return;
+    if (!product_id || typeof product_id !== 'number') {
+      res.status(400).json({ error: 'Invalid or missing product_id' });
+      return; // Early exit
+    }
+    if (!shop_id || typeof shop_id !== 'number') {
+      res.status(400).json({ error: 'Invalid or missing shop_id' });
+      return; // Early exit
+    }
+    if (!quantity_changed || typeof quantity_changed !== 'number') {
+      res.status(400).json({ error: 'Invalid or missing quantity_changed' });
+      return; // Early exit
+    }
+    if (!action_type || typeof action_type !== 'string' || action_type.trim() === '') {
+      res.status(400).json({ error: 'Invalid or missing action_type' });
+      return; // Early exit
     }
 
-    const action = new Action(action_type, product_id, shop_id, quantity_changed, new Date(date));
-    await dataSource.manager.save(action);
+    if (!dataSource.isInitialized) {
+      res.status(500).json({ error: 'Database not initialized' });
+      return; // Early exit
+    }
 
-    res.status(201).json({
-      message: 'Action logged successfully.',
-      actionId: action.id,
-      timestamp: new Date().toISOString()
-    });
-    
+    // Create and save the action instance
+    const newAction = new Action();
+    newAction.product_id = product_id;
+    newAction.shop_id = shop_id;
+    newAction.quantity_changed = quantity_changed;
+    newAction.action_type = action_type;
+    newAction.details = `Shop ID: ${shop_id}, Quantity Changed: ${quantity_changed}`;
+    newAction.date = new Date();
+
+    console.log('Saving new Action:', newAction);
+
+    await dataSource.manager.save(Action, newAction);
+
+    console.log('Action saved successfully:', newAction);
+    res.status(201).json({ message: 'Action logged successfully.' });
   } catch (error) {
-    console.error('Error logging action:', error);
-    res.status(500).send({ error: 'Failed to log action.' });
+    console.error('Error occurred while logging action:', error);
+    res.status(500).json({
+      error: 'Failed to log action',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 });
 
+
+
 // Use the product routes
+console.log('Setting up product routes');
 app.use('/api', router);
 
 // Start the server
